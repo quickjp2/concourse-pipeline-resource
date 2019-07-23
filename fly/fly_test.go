@@ -5,6 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"net/http"
+	"net/http/httptest"
 
 	"github.com/concourse/concourse-pipeline-resource/fly"
 	"github.com/concourse/concourse-pipeline-resource/logger/loggerfakes"
@@ -19,6 +21,22 @@ const (
 exit 1
 `
 )
+
+func ConcourseResponseStub() *httptest.Server {
+	var resp string
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.RequestURI {
+			case "/api/v1/info":
+				resp = "{\"version\":\"5.3.0\",\"worker_version\":\"2.1\",\"external_url\":\"blah\"}"
+			case "/api/v1/cli?arch=amd64&platform=linux":
+				resp = "us-west-2a"
+			default:
+				http.Error(w, "not found", http.StatusNotFound)
+				return
+	  }
+	  w.Write([]byte(resp))
+	}))
+}	
 
 var _ = Describe("Command", func() {
 	var (
@@ -35,7 +53,9 @@ var _ = Describe("Command", func() {
 	)
 
 	BeforeEach(func() {
-		target = "some-target"
+		server := ConcourseResponseStub()
+		defer server.Close()
+		target = server.URL
 		teamName = "main"
 
 		var err error

@@ -67,10 +67,11 @@ func (f command) Login(
 		http.DefaultClient.Transport = tr
 	}
 
-	_, err := f.versionCheck()
+	versionOut, err := f.versionCheck()
 	if err != nil {
 		return nil, err
 	}
+	f.logger.Debugf("Fly Version: %s\n", string(versionOut))
 
 	loginOut, err := f.run(args...)
 	if err != nil {
@@ -239,7 +240,6 @@ func (f command) versionCheck() ([]byte, error) {
 
 	res, err := http.Get(versionUrl)
 	if err != nil {
-		fmt.Printf("Target Info Status: %s\n", res.Status)
 		return nil, err
 	}
 
