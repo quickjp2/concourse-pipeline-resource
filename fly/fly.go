@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"os"
+	"strings"
+	"io"
 
 	"crypto/tls"
 	"net/http"
@@ -62,6 +65,11 @@ func (f command) Login(
 			Proxy:           http.ProxyFromEnvironment,
 		}
 		http.DefaultClient.Transport = tr
+	}
+
+	_, err := f.versionCheck()
+	if err != nil {
+		return nil, err
 	}
 
 	loginOut, err := f.run(args...)
@@ -193,4 +201,83 @@ func (f command) run(args ...string) ([]byte, error) {
 	}
 
 	return outbuf.Bytes(), nil
+}
+
+func (f command) versionCheck() ([]byte, error) {
+	if f.target == "" {
+		return nil, fmt.Errorf("target cannot be empty in command.run")
+	}
+
+	args := []string{
+		"--version",
+	}
+	cmd := exec.Command(f.flyBinaryPath, args...)
+
+	outbuf := bytes.NewBuffer(nil)
+	errbuf := bytes.NewBuffer(nil)
+
+	cmd.Stdout = outbuf
+	cmd.Stderr = errbuf
+
+	f.logger.Debugf("Starting fly command: %v\n", args)
+	err := cmd.Start()
+	if err != nil {
+		// If the command was never started, there will be nothing in the buffers
+		return nil, err
+	}
+
+	f.logger.Debugf("Waiting for fly command: %v\n", args)
+	err = cmd.Wait()
+	if err != nil {
+		if len(errbuf.Bytes()) > 0 {
+			err = fmt.Errorf("%v - %s", err, string(errbuf.Bytes()))
+		}
+		return outbuf.Bytes(), err
+	}
+
+	versionUrl := f.target + "/api/v1/info"
+
+	res, err := http.Get(versionUrl)
+	if err != nil {
+		fmt.Printf("Target Info Status: %s\n", res.Status)
+		return nil, err
+	}
+
+	var targetVersion struct {
+		Version        string `json:"version"`
+		Worker_version string `json:"worker_version"`
+	}
+
+	err = json.NewDecoder(res.Body).Decode(&targetVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	bakedVersion := string(outbuf.Bytes())
+
+	if targetVersion.Version == bakedVersion{
+		return []byte(targetVersion.Version), nil
+	}
+	if strings.Split(targetVersion.Version, ".")[0] == strings.Split(bakedVersion, ".")[0] {
+		return []byte(targetVersion.Version), nil
+	}
+
+	file, err := os.OpenFile(f.flyBinaryPath, os.O_CREATE|os.O_WRONLY, 0777)
+	if err != nil {
+	    return []byte("Unable to open fly binary"), err
+	}
+	defer file.Close()
+
+	binaryUrl := f.target + "/api/v1/cli?arch=amd64&platform=linux"
+
+	binaryResp, err := http.Get(binaryUrl)
+	if err != nil {
+		return []byte("Unable to download new fly binary"), err
+	}
+	defer binaryResp.Body.Close()
+	_, err = io.Copy(file, binaryResp.Body)
+	if err != nil {
+		return []byte("Unable to update fly binary"), err
+	}
+	return []byte(targetVersion.Version), nil
 }
