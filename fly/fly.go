@@ -67,7 +67,7 @@ func (f command) Login(
 		http.DefaultClient.Transport = tr
 	}
 
-	versionOut, err := f.versionCheck()
+	versionOut, err := f.versionCheck(url)
 	if err != nil {
 		return nil, err
 	}
@@ -204,11 +204,7 @@ func (f command) run(args ...string) ([]byte, error) {
 	return outbuf.Bytes(), nil
 }
 
-func (f command) versionCheck() ([]byte, error) {
-	if f.target == "" {
-		return nil, fmt.Errorf("target cannot be empty in command.run")
-	}
-
+func (f command) versionCheck(url string) ([]byte, error) {
 	args := []string{
 		"--version",
 	}
@@ -236,7 +232,7 @@ func (f command) versionCheck() ([]byte, error) {
 		return outbuf.Bytes(), err
 	}
 
-	versionUrl := f.target + "/api/v1/info"
+	versionUrl := url + "/api/v1/info"
 
 	res, err := http.Get(versionUrl)
 	if err != nil {
@@ -268,7 +264,7 @@ func (f command) versionCheck() ([]byte, error) {
 	}
 	defer file.Close()
 
-	binaryUrl := f.target + "/api/v1/cli?arch=amd64&platform=linux"
+	binaryUrl := url + "/api/v1/cli?arch=amd64&platform=linux"
 
 	binaryResp, err := http.Get(binaryUrl)
 	if err != nil {

@@ -53,9 +53,7 @@ var _ = Describe("Command", func() {
 	)
 
 	BeforeEach(func() {
-		server := ConcourseResponseStub()
-		defer server.Close()
-		target = server.URL
+		target = "some-target"
 		teamName = "main"
 
 		var err error
@@ -91,13 +89,15 @@ var _ = Describe("Command", func() {
 		)
 
 		BeforeEach(func() {
-			url = "some-url"
 			username = "some-username"
 			password = "some-password"
 			insecure = false
 		})
 
 		It("returns output without error", func() {
+			server := ConcourseResponseStub()
+			defer server.Close()
+			url = server.URL
 			output, err := flyCommand.Login(url, teamName, username, password, insecure)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -122,6 +122,9 @@ var _ = Describe("Command", func() {
 			})
 
 			It("adds -k flag to command", func() {
+				server := ConcourseResponseStub()
+				defer server.Close()
+				url = server.URL
 				output, err := flyCommand.Login(url, teamName, username, password, insecure)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -148,6 +151,9 @@ var _ = Describe("Command", func() {
 			})
 
 			It("returns an error", func() {
+				server := ConcourseResponseStub()
+				defer server.Close()
+				url = server.URL
 				_, err := flyCommand.Login(url, teamName, username, password, insecure)
 				Expect(err).To(HaveOccurred())
 			})
@@ -160,6 +166,9 @@ var _ = Describe("Command", func() {
 			})
 
 			It("does not pass the `p` or `u` flags to fly", func() {
+				server := ConcourseResponseStub()
+				defer server.Close()
+				url = server.URL
 				output, err := flyCommand.Login(url, teamName, username, password, insecure)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -183,6 +192,9 @@ var _ = Describe("Command", func() {
 			})
 
 			It("appends stderr to the error", func() {
+				server := ConcourseResponseStub()
+				defer server.Close()
+				url = server.URL
 				_, err := flyCommand.Login(url, teamName, username, password, insecure)
 				Expect(err).To(HaveOccurred())
 
