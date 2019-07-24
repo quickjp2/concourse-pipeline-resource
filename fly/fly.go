@@ -232,6 +232,9 @@ func (f command) versionCheck(url string) ([]byte, error) {
 		return outbuf.Bytes(), err
 	}
 
+	// bakedVersion := string(outbuf.Bytes())
+	bakedVersion := "5.3.0"
+
 	versionUrl := url + "/api/v1/info"
 
 	res, err := http.Get(versionUrl)
@@ -248,9 +251,6 @@ func (f command) versionCheck(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// bakedVersion := string(outbuf.Bytes())
-	bakedVersion := "5.3.0"
 
 	if targetVersion.Version == bakedVersion{
 		return []byte(targetVersion.Version), nil
